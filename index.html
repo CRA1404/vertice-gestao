@@ -749,7 +749,7 @@ function badgeDias(d) {
 
 function calcEncargos(valor, venc, base, txJuros, txMulta) {
   const d = diasAtraso(venc, base);
-  const multa = valor * txMulta;
+  const multa = d > 0 ? valor * txMulta : 0;
   const juros = valor * txJuros * (d / 30);
   return { dias:d, multa, juros, enc:multa+juros, total:valor+multa+juros };
 }
