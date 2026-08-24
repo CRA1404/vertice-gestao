@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vértice – Gestão de Recebíveis</title>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --azul:#1a365d;--azul2:#2c5282;--azul3:#ebf0f9;
+  --red:#c53030;--ora:#dd6b20;--grn:#276749;--grn2:#f0fff4;
+  --yel:#b7791f;--yel2:#fffff0;
+  --gray1:#f7fafc;--gray2:#edf2f7;--gray3:#e2e8f0;--gray4:#cbd5e0;
+  --gray5:#a0aec0;--gray6:#718096;--gray7:#4a5568;--gray8:#2d3748;--gray9:#1a202c;
+  --radius:8px;--shadow:0 1px 4px rgba(0,0,0,.1);
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:var(--gray9);font-size:14px;}
+header{background:linear-gradient(135deg,var(--azul) 0%,var(--azul2) 100%);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:14px;}
+.logo-v{font-size:2rem;font-weight:900;letter-spacing:-2px;opacity:.9;}
+header h1{font-size:1.15rem;font-weight:700;}
+header p{font-size:.75rem;opacity:.75;margin-top:2px;}
+.tab-bar{background:#fff;border-bottom:2px solid var(--gray3);display:flex;gap:2px;padding:0 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 4px rgba(0,0,0,.06);}
+.tab-btn{background:none;border:none;padding:12px 18px;font-size:.85rem;font-weight:600;color:var(--gray6);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;margin-bottom:-2px;}
+.tab-btn:hover{color:var(--azul2);}
+.tab-btn.active{color:var(--azul);border-bottom-color:var(--azul);}
+.tab-pane{display:none;padding:20px 24px;}
+.tab-pane.active{display:block;}
+.container{max-width:1200px;margin:0 auto;}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 22px;margin-bottom:16px;}
+.card-title{font-size:.9rem;font-weight:700;color:var(--azul);border-bottom:2px solid var(--azul3);padding-bottom:7px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:18px;}
+.kpi{background:#fff;border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-left:4px solid;}
+.kpi.azul{border-color:var(--azul2)}.kpi.red{border-color:var(--red)}.kpi.ora{border-color:var(--ora)}.kpi.grn{border-color:var(--grn)}.kpi.yel{border-color:var(--yel)}
+.kpi .lbl{font-size:.68rem;font-weight:700;color:var(--gray6);text-transform:uppercase;letter-spacing:.04em;}
+.kpi .val{font-size:1.15rem;font-weight:700;color:var(--gray8);margin-top:4px;}
+.kpi .sub{font-size:.7rem;color:var(--gray5);margin-top:2px;}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:.72rem;font-weight:700;color:var(--gray7);text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select{border:1px solid var(--gray4);border-radius:6px;padding:7px 10px;font-size:.85rem;background:var(--gray1);color:var(--gray8);}
+.field input:focus,.field select:focus{outline:none;border-color:#4299e1;background:#fff;}
+.btn{border:none;border-radius:6px;padding:8px 16px;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .15s;}
+.btn-primary{background:var(--azul2);color:#fff}.btn-primary:hover{background:var(--azul)}
+.btn-success{background:var(--grn);color:#fff}.btn-success:hover{background:#22543d}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#9b2c2c}
+.btn-pdf{background:#744210;color:#fff}.btn-pdf:hover{background:#92400e}
+.btn-sm{padding:4px 10px;font-size:.75rem;}
+.btn-outline{background:none;border:1px solid var(--gray4);color:var(--gray7)}.btn-outline:hover{background:var(--gray2)}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.8rem;}
+thead th{background:var(--azul);color:#fff;padding:9px 10px;text-align:left;white-space:nowrap;font-weight:600;}
+thead th.r{text-align:right;}
+tbody tr{border-bottom:1px solid var(--gray3);}
+tbody tr:hover{background:#f0f7ff;}
+tbody td{padding:8px 10px;white-space:nowrap;vertical-align:middle;}
+tbody td.r{text-align:right;font-family:'Courier New',monospace;}
+tfoot td{padding:9px 10px;background:var(--azul);color:#fff;font-weight:700;}
+tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-weight:700;font-size:.7rem;white-space:nowrap;}
+.badge-vencido{background:#fff5f5;color:var(--red);border:1px solid #fed7d7;}
+.badge-pago{background:var(--grn2);color:var(--grn);border:1px solid #c6f6d5;}
+.badge-avencer{background:var(--azul3);color:var(--azul2);border:1px solid #bee3f8;}
+.badge-hoje{background:#fffff0;color:var(--yel);border:1px solid #faf089;}
+.badge-dias{background:#fff5f5;color:var(--red);border:1px solid #fed7d7;font-size:.68rem;}
+.badge-dias.ora{background:#fffaf0;color:#c05621;border-color:#fbd38d;}
+.badge-dias.yel{background:#fffff0;color:var(--yel);border-color:#f6e05e;}
+.badge-serie{display:inline-block;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700;background:var(--azul3);color:var(--azul2);}
+.contract-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:18px;}
+.contract-card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.contract-card:hover{border-color:var(--azul2);box-shadow:0 2px 8px rgba(44,82,130,.2);}
+.contract-card.selected{border-color:var(--azul);background:var(--azul3);}
+.cc-apto{font-size:1.1rem;font-weight:700;color:var(--azul);}
+.cc-nome{font-size:.75rem;color:var(--gray6);margin-top:2px;line-height:1.3;}
+.cc-stats{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.cc-stat{font-size:.7rem;font-weight:700;}
+.cc-stat.red{color:var(--red)}.cc-stat.grn{color:var(--grn)}.cc-stat.ora{color:var(--ora)}.cc-stat.gray{color:var(--gray6)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:var(--radius);padding:24px;width:480px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2);}
+.modal h2{font-size:1rem;font-weight:700;color:var(--azul);margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid var(--azul3);}
+.modal-row{display:flex;gap:12px;margin-bottom:10px;}
+.modal-field{flex:1;display:flex;flex-direction:column;gap:4px;}
+.modal-field label{font-size:.72rem;font-weight:700;color:var(--gray7);text-transform:uppercase;letter-spacing:.04em;}
+.modal-field input,.modal-field select{border:1px solid var(--gray4);border-radius:6px;padding:7px 10px;font-size:.85rem;width:100%;}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.modal-info{background:var(--azul3);border-radius:6px;padding:10px 12px;font-size:.78rem;color:var(--azul2);margin-bottom:12px;line-height:1.5;}
+.progress{background:var(--gray3);border-radius:10px;height:8px;overflow:hidden;margin-top:6px;}
+.progress-bar{height:100%;border-radius:10px;background:var(--grn);transition:width .3s;}
+.clausula-box{background:#fffbeb;border:1px solid #f6e05e;border-left:4px solid #d69e2e;border-radius:var(--radius);padding:14px 18px;}
+.clausula-box h3{font-size:.8rem;font-weight:700;color:#744210;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;}
+.clausula-box p{font-size:.77rem;line-height:1.6;color:var(--gray8);margin-bottom:6px;}
+.clausula-box p:last-child{margin-bottom:0;}
+.art{font-weight:700;color:#744210;}
+.nota{font-size:.7rem;color:var(--gray6);margin-top:8px;line-height:1.5;}
+.status-pago td{background:#f0fff4 !important;}
+.status-pago:hover td{background:#e6ffee !important;}
+.alert-box{background:#fff5f5;border:1px solid #fed7d7;border-left:4px solid var(--red);border-radius:var(--radius);padding:10px 14px;font-size:.78rem;color:var(--red);margin-bottom:12px;}
+
+@media print{
+  @page{size:A4 portrait;margin:10mm 8mm;}
+  body{background:#fff;font-size:8pt;}
+  .tab-bar,.no-print,header{display:none!important;}
+  .tab-pane{display:none!important;padding:0;}
+  .tab-pane.print-active{display:block!important;}
+  .card{box-shadow:none;border:1px solid #ccc;border-radius:4px;padding:8px 10px;margin-bottom:8px;}
+  .card-title{font-size:8pt;padding-bottom:4px;margin-bottom:8px;}
+  .kpi-grid{grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px;}
+  .kpi{padding:6px 8px;border-radius:4px;box-shadow:none;border:1px solid #e2e8f0;}
+  .kpi .lbl{font-size:5.5pt;} .kpi .val{font-size:7.5pt;}
+  table{font-size:7pt;}
+  thead th{padding:5px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody td{padding:4px 6px;}
+  tfoot td{padding:5px 6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .kpi{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .clausula-box{-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:8px 10px;}
+  .clausula-box h3{font-size:7pt;} .clausula-box p{font-size:6.5pt;}
+  .badge{border:none!important;padding:1px 4px;font-size:6.5pt;}
+  .badge-vencido{color:var(--red)!important;background:none!important;}
+  .badge-pago{color:var(--grn)!important;background:none!important;}
+  .badge-avencer{color:var(--azul2)!important;background:none!important;}
+  .badge-serie{background:none!important;color:var(--azul)!important;border:1px solid #ccc;}
+  .status-pago td{background:none!important;}
+  .nota{font-size:5.5pt;}
+  #printHeader{display:block!important;}
+  .alert-box{display:none!important;}
+}
+#printHeader{display:none;font-size:7pt;color:#555;margin-bottom:8px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-v">V</div>
+  <div style="flex:1">
+    <h1>Vértice Residencial — Gestão de Recebíveis</h1>
+    <p>ACF Reluma Empreendimentos Imobiliários SPE LTDA &nbsp;·&nbsp; Bairro Casa Branca, Santo André – SP</p>
+  </div>
+  <div style="text-align:right;font-size:.72rem;opacity:.85;">
+    <div>🗄️ Supabase</div>
+    <div id="dbStatus" style="font-size:.68rem;margin-top:2px;">Conectando…</div>
+  </div>
+</header>
+
+<div class="tab-bar no-print">
+  <button class="tab-btn active" onclick="openTab('painel',this)">📊 Painel Geral</button>
+  <button class="tab-btn" onclick="openTab('parcelas',this)">📋 Parcelas por Contrato</button>
+  <button class="tab-btn" onclick="openTab('relatorios',this)">📑 Relatórios</button>
+  <button class="tab-btn" onclick="openTab('clausula',this)">⚖️ Cláusula Contratual</button>
+</div>
+
+<!-- CABEÇALHO IMPRESSÃO -->
+<div id="printHeader">
+  <strong>Vértice Residencial — Gestão de Recebíveis</strong> &nbsp;|&nbsp;
+  ACF Reluma Empreendimentos Imobiliários SPE LTDA &nbsp;|&nbsp;
+  Emitido em: <span id="phDate"></span>
+</div>
+
+<!-- ========== TAB 1: PAINEL ========== -->
+<div id="tab-painel" class="tab-pane active">
+<div class="container">
+  <div id="painelKpis" class="kpi-grid"></div>
+  <div class="card">
+    <div class="card-title">🏠 Resumo por Unidade</div>
+    <div id="contractCards" class="contract-grid"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚠️ Parcelas Vencidas — Visão Geral</div>
+    <div class="tbl-wrap">
+      <table id="tblVencidas">
+        <thead><tr>
+          <th>Unidade</th><th>Série</th><th>Comprador</th><th>Parc.</th>
+          <th>Vencimento</th><th class="r">Valor Original</th>
+          <th class="r">Dias</th><th class="r">Multa</th>
+          <th class="r">Juros 1%/mês</th><th class="r">Total a Pagar</th>
+          <th class="no-print">Ação</th>
+        </tr></thead>
+        <tbody id="vencidasBody"></tbody>
+        <tfoot id="vencidasFoot"></tfoot>
+      </table>
+    </div>
+    <p class="nota">Data base: <span id="dataBaseLabel"></span> &nbsp;·&nbsp;
+    Juros pro-rata die (1% a.m.) &nbsp;·&nbsp;
+    Multa: 10% para Aptos 73/74/178 · 2% para Aptos 172/194 &nbsp;·&nbsp;
+    Apto 178: parcelas IRREAJUSTÁVEIS &nbsp;·&nbsp; Apto 194: sem correção monetária (cláusula "Em Tempo")</p>
+  </div>
+</div>
+</div>
+
+<!-- ========== TAB 2: PARCELAS POR CONTRATO ========== -->
+<div id="tab-parcelas" class="tab-pane">
+<div class="container">
+  <div class="card no-print">
+    <div class="card-title">⚙️ Filtros</div>
+    <div class="row">
+      <div class="field">
+        <label>Unidade</label>
+        <select id="selContrato" onchange="renderParcelas()">
+          <option value="">— Selecione a unidade —</option>
+          <option value="73">Apto 73 — Alex Silva Nascimento</option>
+          <option value="74">Apto 74 — Alex Silva Nascimento</option>
+          <option value="172">Apto 172 — Rodrigo Nunes de Almeida</option>
+          <option value="178">Apto 178 — Wilson Benedito Davi</option>
+          <option value="125">Apto 125 — Rodrigo de Souza Silva</option>
+          <option value="194">Apto 194 — Claudio Ivo Chaves</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="filtroStatus" onchange="renderParcelas()">
+          <option value="TODOS">Todas</option>
+          <option value="VENCIDO">Vencidas</option>
+          <option value="A_VENCER">A Vencer</option>
+          <option value="PAGO">Pagas</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Data base cálculo</label>
+        <input type="date" id="dataBaseContrato" onchange="renderParcelas()">
+      </div>
+      <button class="btn btn-pdf" onclick="imprimirParcelas()">🖨️ Imprimir</button>
+    </div>
+  </div>
+
+  <div id="parcelasKpis" class="kpi-grid" style="display:none"></div>
+  <div id="progressCard" class="card" style="display:none">
+    <div class="card-title" id="progressTitle">Progresso do Contrato</div>
+    <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    <p id="progressLabel" style="font-size:.75rem;color:var(--gray6);margin-top:6px;"></p>
+  </div>
+
+  <div class="card" id="cardParcelasTabela" style="display:none">
+    <div class="card-title" id="parcelasTitulo">📋 Parcelas</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th class="r">#</th><th>Série</th><th>Parc./Série</th><th>Vencimento</th><th>Status</th>
+          <th class="r">Valor Original</th><th class="r">Dias Atraso</th>
+          <th class="r">Multa</th><th class="r">Juros</th><th class="r">Total a Pagar</th>
+          <th>Pagamento</th><th class="no-print">Ação</th>
+        </tr></thead>
+        <tbody id="parcelasBody"></tbody>
+        <tfoot id="parcelasFoot"></tfoot>
+      </table>
+    </div>
+    <p class="nota" id="parcelasNota"></p>
+  </div>
+</div>
+</div>
+
+<!-- ========== TAB 3: RELATÓRIOS ========== -->
+<div id="tab-relatorios" class="tab-pane">
+<div class="container">
+  <div class="card no-print">
+    <div class="card-title">⚙️ Filtros do Relatório</div>
+    <div class="row">
+      <div class="field">
+        <label>Tipo de Relatório</label>
+        <select id="tipoRelatorio" onchange="onTipoRelChange()">
+          <option value="VENCIDOS">Apenas Vencidas</option>
+          <option value="CONTRATO">Contrato Completo</option>
+          <option value="PERIODO">Por Período de Vencimento</option>
+          <option value="PAGAS">Parcelas Pagas</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Unidade</label>
+        <select id="relContrato" onchange="renderRelatorio()">
+          <option value="ALL">Todas as unidades</option>
+          <option value="73">Apto 73 — Alex</option>
+          <option value="74">Apto 74 — Alex</option>
+          <option value="172">Apto 172 — Rodrigo</option>
+          <option value="178">Apto 178 — Wilson</option>
+          <option value="125">Apto 125 — Rodrigo</option>
+          <option value="194">Apto 194 — Claudio</option>
+        </select>
+      </div>
+      <div class="field" id="fieldPeriodoInicio" style="display:none">
+        <label>Vencimento de</label>
+        <input type="date" id="periodoInicio" onchange="renderRelatorio()">
+      </div>
+      <div class="field" id="fieldPeriodoFim" style="display:none">
+        <label>Vencimento até</label>
+        <input type="date" id="periodoFim" onchange="renderRelatorio()">
+      </div>
+      <div class="field">
+        <label>Data base encargos</label>
+        <input type="date" id="relDataBase" onchange="renderRelatorio()">
+      </div>
+      <button class="btn btn-pdf" onclick="imprimirRelatorio()">🖨️ Imprimir PDF</button>
+    </div>
+  </div>
+
+  <div id="relKpis" class="kpi-grid" style="display:none"></div>
+  <div class="card" id="cardRelatorio" style="display:none">
+    <div class="card-title" id="relTitulo">📑 Relatório</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Unidade</th><th>Série</th><th>Parc.</th><th>Vencimento</th><th>Status</th>
+          <th class="r">Valor Original</th><th class="r">Dias Atr.</th>
+          <th class="r">Multa</th><th class="r">Juros</th>
+          <th class="r">Total</th><th>Dt. Pagamento</th>
+        </tr></thead>
+        <tbody id="relBody"></tbody>
+        <tfoot id="relFoot"></tfoot>
+      </table>
+    </div>
+    <p class="nota" id="relNota"></p>
+  </div>
+</div>
+</div>
+
+<!-- ========== TAB 4: CLÁUSULA ========== -->
+<div id="tab-clausula" class="tab-pane">
+<div class="container">
+  <div class="card">
+    <div class="card-title">⚖️ Penalidades por Contrato</div>
+    <div class="alert-box" style="background:#fff5f5;border-color:#fed7d7;border-left-color:var(--red);color:var(--gray8);">
+      <strong>Atenção — Multa varia por contrato:</strong><br>
+      · Aptos 73 e 74 (Aditamento): Multa <strong>10%</strong>, Juros de mora 1%/mês &nbsp;|&nbsp;
+      · Apto 172: Multa <strong>2%</strong>, Juros 1%/mês &nbsp;|&nbsp;
+      · Apto 178: Multa <strong>10%</strong>, Juros 1%/mês — Parcelas IRREAJUSTÁVEIS &nbsp;|&nbsp;
+      · Apto 194: Multa <strong>2%</strong>, Juros 1%/mês — sem correção monetária (cláusula "Em Tempo")
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚖️ Cláusula IV — Das Penalidades e da Rescisão (Contratos 172 e 194)</div>
+    <div class="clausula-box">
+      <h3>IV – Das Penalidades e da Rescisão</h3>
+      <p><span class="art">4.</span> Caso o(a-s) <strong>PROMISSÁRIO(A-S)</strong> deixe(m) de efetuar(em), na(s) data(s) de seu(s) vencimento(s), o(s) pagamento(s) de qualquer parcela assumida por força deste contrato, só poderá fazê-lo com os respectivos encargos de mora, consistentes em reajustamentos pela forma prevista, correção <em>"pro-rata-die"</em>, <strong>juros de mora à razão de 1% (um por cento) ao mês pro-rata-die</strong>, <strong>multa equivalente a 2% (dois por cento) do valor do débito atualizado</strong> e <strong>honorários advocatícios à base de 10% (dez por cento)</strong> calculados sobre o valor total do débito devidamente atualizado, caso haja intervenção de um profissional de direito para recebimento amigável.</p>
+      <p><span class="art">4.1.</span> Iniciada a notificação judicial ou extrajudicial, o(a-s) PROMISSÁRIO(A-S) que pretender(em) purgar a mora deverá(ão) fazê-lo juntamente com o pagamento dos encargos de mora acima previstos, além das despesas judiciais e extrajudiciais provocadas pelo atraso.</p>
+      <p><span class="art">4.2.</span> Caracterizado o inadimplemento pela não purgação da mora, a PROMITENTE poderá imediatamente dar como rescindido o presente contrato, de pleno direito.</p>
+      <p><span class="art">4.3.</span> Ocorrendo a rescisão por culpa do(a-s) PROMISSÁRIO(A-S), a PROMITENTE devolverá ao(s) mesmo(a-s) a quantia recebida, devidamente atualizada, descontando-se: a) 8,93% sobre as parcelas pagas (tributos); b) 20% sobre as parcelas pagas (despesas administrativas e penalidade); c) 3,5% sobre o valor total do contrato (intermediação).</p>
+      <p style="font-size:.7rem;color:#744210;font-style:italic;margin-top:10px;">Instrumento Particular de Contrato de Promessa de Venda e Compra — Vértice Residencial, Santo André – SP · ACF Reluma Empreendimentos Imobiliários SPE LTDA.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚖️ Penalidades — Aptos 73 e 74 (Aditamento Contratual)</div>
+    <div class="clausula-box" style="border-left-color:#c53030;border-color:#fed7d7;background:#fff5f5;">
+      <h3 style="color:#c53030;">Aditamento — Multa de 10%</h3>
+      <p><span class="art" style="color:#c53030;">Cláusula Penal:</span> Em caso de inadimplência de qualquer das parcelas nas datas de seus vencimentos, incidirá sobre o valor da parcela em atraso <strong>multa moratória de 10% (dez por cento)</strong> acrescida de <strong>juros de mora de 1% (um por cento) ao mês pro-rata-die</strong>, sem prejuízo de correção monetária e honorários advocatícios, caso necessário.</p>
+      <p style="font-size:.7rem;color:#c53030;font-style:italic;margin-top:8px;">Fonte: Aditamento ao Instrumento Particular de Contrato de Promessa de Venda e Compra — Aptos 73 e 74.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📝 Cláusula "Em Tempo" — Apto 194 / Série G</div>
+    <div class="clausula-box" style="border-left-color:#2c5282;border-color:#bee3f8;background:#ebf8ff;">
+      <h3 style="color:#2c5282;">Série G — Correção 0,80% a.m. (juros compostos)</h3>
+      <p><span class="art" style="color:#2c5282;">Em Tempo:</span> O valor da Série G (R$ 85.500,00) será corrigido desde a data de assinatura do contrato (28/02/2023) até a data do primeiro pagamento (20/12/2024) pela taxa de <strong>0,80% ao mês compostos</strong>, sem correção monetária adicional. Sobre o montante corrigido aplica-se cálculo de prestações fixas anuais com juros compostos equivalentes à taxa mensal de 0,80% a.m.</p>
+      <p><span class="art" style="color:#2c5282;">Cálculo aplicado:</span> Base corrigida = R$ 85.500,00 × (1,008)^22 meses ≈ R$ 101.882,00 · Taxa anual equivalente = (1,008)^12 − 1 ≈ 10,034% a.a. · PMT (9 parcelas anuais) ≈ R$ 17.713,00.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ========== MODAL BAIXA ========== -->
+<div class="modal-overlay" id="modalBaixa">
+  <div class="modal">
+    <h2>✅ Registrar Baixa de Pagamento</h2>
+    <div class="modal-info" id="modalBaixaInfo"></div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Data do Pagamento</label>
+        <input type="date" id="bxData">
+      </div>
+      <div class="modal-field">
+        <label>Valor Pago (R$)</label>
+        <input type="number" id="bxValor" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Forma de Pagamento</label>
+        <select id="bxForma">
+          <option>Boleto Bancário</option><option>Transferência/PIX</option>
+          <option>Depósito</option><option>Cheque</option><option>Outro</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Nº Documento / Referência</label>
+        <input type="text" id="bxRef" placeholder="Opcional">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarBaixa()">✅ Confirmar Baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODAL ESTORNO ========== -->
+<div class="modal-overlay" id="modalEstorno">
+  <div class="modal">
+    <h2>↩️ Estornar Pagamento</h2>
+    <div class="modal-info" id="modalEstornoInfo"></div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarEstorno()">↩️ Confirmar Estorno</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DADOS — Vértice Residencial
+//  Contratos individuais com todas as séries e parcelas
+//  Base de dados: Quadros Resumo / Aditamentos (PDFs)
+// ============================================================
+
+// ─── Cálculo Série G — Apto 194 ──────────────────────────
+// Base: R$ 85.500 | Assinatura: 28/02/2023 | 1º pgto: 20/12/2024
+// n = 22 meses | taxa mensal = 0,80% | taxa anual equiv = (1,008)^12 - 1
+const G_BASE     = 85500;
+const G_TX_MEN   = 0.008;        // 0,80% a.m.
+const G_MESES    = 22;           // fev/2023 → dez/2024
+const G_N_PARC   = 9;            // 9 parcelas anuais
+const G_BASE_COR = G_BASE * Math.pow(1 + G_TX_MEN, G_MESES);
+const G_TX_ANO   = Math.pow(1 + G_TX_MEN, 12) - 1;
+const G_PMT      = G_BASE_COR * G_TX_ANO / (1 - Math.pow(1 + G_TX_ANO, -G_N_PARC));
+// G_PMT ≈ R$ 17.713 (calculado dinamicamente)
+
+// ─── Geração de parcelas mensais ─────────────────────────
+function gerarMensais(serie, descricao, inicioStr, total, valor) {
+  const [y,m,d] = inicioStr.split('-').map(Number);
+  const parc = [];
+  for (let i = 0; i < total; i++) {
+    let mes = m + i - 1;
+    let ano = y + Math.floor(mes / 12);
+    mes = mes % 12 + 1;
+    const venc = `${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    parc.push({ serie, descricao, num: i+1, total, venc, valor,
+                status:'PENDENTE', dtPagamento:'', valorPago:0, forma:'', ref:'' });
+  }
+  return parc;
+}
+
+// ─── Geração de parcelas anuais ───────────────────────────
+// datas: array de strings YYYY-MM-DD
+function gerarAnuais(serie, descricao, datas, valor) {
+  return datas.map((venc, i) => ({
+    serie, descricao, num: i+1, total: datas.length, venc,
+    valor: Number(valor.toFixed(2)),
+    status:'PENDENTE', dtPagamento:'', valorPago:0, forma:'', ref:''
+  }));
+}
+
+// ─── Parcela única ────────────────────────────────────────
+function gerarUnica(serie, descricao, venc, valor) {
+  return [{ serie, descricao, num:1, total:1, venc,
+            valor, status:'PENDENTE', dtPagamento:'', valorPago:0, forma:'', ref:'' }];
+}
+
+// ─── Definição dos contratos ─────────────────────────────
+// FONTES: Quadros Resumo, Aditamentos e SIENGE Contas a Receber 19/08/2026
+// Contratos reestruturados via Aditamento com início out/nov 2025
+const DEFINICOES = {
+
+  // ── APTO 73 ─────────────────────────────────────────────
+  // Série A: contrato original (36 mensais 15/11/2022→15/10/2025, dia 15)
+  // Série B: aditamento (84 mensais 20/11/2025→, dia 20) — SIENGE título 209
+  // SIENGE em aberto: B parcelas 6,7,8,9 (abr/mai/jun/jul 2026)
+  "73": {
+    apto:'Apto 73', contrato:'CT.RV73',
+    comprador:'Alex Silva Nascimento', co:'',
+    txMulta: 0.10, txJuros: 0.01,
+    obs: 'Aditamento: Multa 10% · Série A pré-aditamento (dia 15) · Série B pós-aditamento (dia 20)',
+    series: () => [
+      ...gerarMensais('A','36 parcelas pré-aditamento (dia 15)','2022-11-15', 36, 4762.86),
+      ...gerarMensais('B','84 parcelas aditamento (dia 20)',    '2025-11-20', 84, 4762.86)
+    ]
+  },
+
+  // ── APTO 74 ─────────────────────────────────────────────
+  // Série A: contrato original (36 mensais 15/11/2022→15/10/2025)
+  // Série B: aditamento (84 mensais 20/11/2025→) — SIENGE título 210
+  // SIENGE em aberto: B parcelas 6,7,8,9 (abr/mai/jun/jul 2026)
+  "74": {
+    apto:'Apto 74', contrato:'CT.RV74',
+    comprador:'Alex Silva Nascimento', co:'',
+    txMulta: 0.10, txJuros: 0.01,
+    obs: 'Aditamento: Multa 10% · Série A pré-aditamento (dia 15) · Série B pós-aditamento (dia 20)',
+    series: () => [
+      ...gerarMensais('A','36 parcelas pré-aditamento (dia 15)','2022-11-15', 36, 4441.85),
+      ...gerarMensais('B','84 parcelas aditamento (dia 20)',    '2025-11-20', 84, 4441.85)
+    ]
+  },
+
+  // ── APTO 172 ────────────────────────────────────────────
+  // Série A:  pré-aditamento (24 mensais set/2023→ago/2025, dia 20)
+  // Série A2: aditamento (97 mensais out/2025→, dia 20) — SIENGE título 217
+  // Série B:  5 anuais R$10.000 (ago/2024→ago/2028)
+  // SIENGE em aberto: A2 parcelas 9,10 (jun e jul 2026)
+  "172": {
+    apto:'Apto 172', contrato:'CT.RV172',
+    comprador:'Rodrigo Nunes de Almeida', co:'Eliane Maria da Silva Almeida',
+    txMulta: 0.02, txJuros: 0.01,
+    obs: 'Multa 2% · Série A2: pós-aditamento (out/2025) · Série B: anual agosto',
+    series: () => [
+      ...gerarMensais('A', '24 parcelas pré-aditamento', '2023-09-20', 24, 2500.00),
+      ...gerarMensais('A2','97 parcelas aditamento (dia 20)','2025-10-20', 97, 2500.00),
+      ...gerarAnuais ('B', '5 parcelas anuais R$10.000',
+        ['2024-08-20','2025-08-20','2026-08-20','2027-08-20','2028-08-20'], 10000.00)
+    ]
+  },
+
+  // ── APTO 178 ────────────────────────────────────────────
+  // Série B:  pré-aditamento (31 mensais 15/03/2023→15/09/2025, dia 15) IRREAJUSTÁVEL
+  // Série B2: aditamento (69 mensais 20/10/2025→, dia 20) — SIENGE título 215
+  // SIENGE em aberto: B2 parcelas 9,10 (jun e jul 2026)
+  "178": {
+    apto:'Apto 178', contrato:'CT.RV178',
+    comprador:'Wilson Benedito Davi', co:'Sandra Cristina de Oliveira Leme Davi',
+    txMulta: 0.10, txJuros: 0.01,
+    obs: 'Multa 10% · IRREAJUSTÁVEL · Série B pré-adit (dia 15) · Série B2 pós-adit (dia 20)',
+    series: () => [
+      ...gerarMensais('B', '31 parcelas pré-aditamento (dia 15, fixas)',  '2023-03-15', 31, 3500.00),
+      ...gerarMensais('B2','69 parcelas aditamento (dia 20, fixas)',       '2025-10-20', 69, 3500.00)
+    ]
+  },
+
+  // ── APTO 194 ────────────────────────────────────────────
+  // Séries A-E: pré-chaves (histórico, todas pagas)
+  // Série F:    17 mensais pré-aditamento (R$3.671,28, mai/2024→set/2025)
+  // Série F2:   89 mensais aditamento (R$4.155,87, out/2025→) — SIENGE título 216
+  // Série G:    9 anuais (0,80%/mês compostos, base corrigida)
+  // SIENGE em aberto: F2 parcelas 6 (mar/2026) e 10 (jul/2026)
+  "125": {
+    apto:'Apto 125', contrato:'CT.RV125',
+    comprador:'Rodrigo de Souza Silva', co:'',
+    txMulta: 0.10, txJuros: 0.01,
+    obs: 'Multa 10% · IGP-M mora · Contrato 23/05/2023 · A: R$50k única · B: 48×R$2k mensais (dia 20) · C: 3×R$30k anuais (dia 25/11) · D: 4×R$6k anuais (dia 25/12)',
+    series: () => [
+      ...gerarUnica  ('A', 'Parcela única',                      '2023-08-20',                               50000.00),
+      ...gerarMensais('B', '48 parcelas mensais (dia 20)',        '2023-08-20', 48,                           2000.00),
+      ...gerarAnuais ('C', '3 parcelas anuais R$30k (dia 25/11)', ['2023-11-25','2024-11-25','2025-11-25'],   30000.00),
+      ...gerarAnuais ('D', '4 parcelas anuais R$6k (dia 25/12)',  ['2023-12-25','2024-12-25','2025-12-25','2026-12-25'], 6000.00)
+    ]
+  },
+
+  "194": {
+    apto:'Apto 194', contrato:'CT.RV194',
+    comprador:'Claudio Ivo Chaves', co:'Fabiana Santana Viana Chaves',
+    txMulta: 0.02, txJuros: 0.01,
+    obs: 'Multa 2% · Sem correção monetária · Série G: 0,80%/mês compostos · F2: valor reajustado no aditamento',
+    series: () => [
+      ...gerarMensais('A', '13 parcelas mensais (pré-obra)',  '2023-03-20', 13, 1166.98),
+      ...gerarUnica  ('B', 'Parcela única',                   '2023-04-20',     2540.57),
+      ...gerarMensais('C', '2 parcelas mensais',              '2023-06-20',  2, 1295.62),
+      ...gerarUnica  ('D', 'Parcela única',                   '2023-12-10',     5143.98),
+      ...gerarUnica  ('E', 'Parcela única',                   '2024-04-20',     1579.24),
+      ...gerarMensais('F', '17 parcelas pré-aditamento',      '2024-05-20', 17, 3671.28),
+      ...gerarMensais('F2','89 parcelas aditamento (R$4.155,87)','2025-10-20',89, 4155.87),
+      ...gerarAnuais ('G', '9 parcelas anuais (0,80%/mês compostos)',
+        ['2024-12-20','2025-12-20','2026-12-20','2027-12-20','2028-12-20',
+         '2029-12-20','2030-12-20','2031-12-20','2032-12-20'], G_PMT)
+    ]
+  }
+};
+
+// ─── Parcelas em aberto conforme SIENGE 19/08/2026 ───────
+// Identificadas por contrato + vencimento + valor
+// Status será revertido de PAGO para PENDENTE na inicialização
+const SIENGE_ABERTOS = [
+  { k:'194', venc:'2026-03-20', valor:4155.87 }, // F2 parc 6  — 152 dias
+  { k:'73',  venc:'2026-04-20', valor:4762.86 }, // B parc 6   — 121 dias
+  { k:'74',  venc:'2026-04-20', valor:4441.85 }, // B parc 6   — 121 dias
+  { k:'73',  venc:'2026-05-20', valor:4762.86 }, // B parc 7   — 91 dias
+  { k:'74',  venc:'2026-05-20', valor:4441.85 }, // B parc 7   — 91 dias
+  { k:'73',  venc:'2026-06-20', valor:4762.86 }, // B parc 8   — 60 dias
+  { k:'74',  venc:'2026-06-20', valor:4441.85 }, // B parc 8   — 60 dias
+  { k:'172', venc:'2026-06-20', valor:2500.00 }, // A2 parc 9  — 60 dias
+  { k:'178', venc:'2026-06-20', valor:3500.00 }, // B2 parc 9  — 60 dias
+  { k:'73',  venc:'2026-07-20', valor:4762.86 }, // B parc 9   — 30 dias
+  { k:'74',  venc:'2026-07-20', valor:4441.85 }, // B parc 9   — 30 dias
+  { k:'194', venc:'2026-07-20', valor:4155.87 }, // F2 parc 10 — 30 dias
+  { k:'172', venc:'2026-07-20', valor:2500.00 }, // A2 parc 10 — 30 dias
+  { k:'178', venc:'2026-07-20', valor:3500.00 }, // B2 parc 10 — 30 dias
+];
+
+// ─── Utilitários de data (declarados antes de qualquer uso) ───
+const today = () => new Date().toISOString().split('T')[0];
+
+// ─── Status de vencimento para auto-inicialização ─────────
+// Todas as parcelas com vencimento < hoje → PAGA por padrão
+// Operador usa estorno para reverter as que SIENGE aponta em aberto
+const DATA_CORTE_PAGO = today(); // data de hoje dinamicamente
+
+// ─── localStorage ─────────────────────────────────────────
+let STATE = {};
+
+function inicializarState() {
+  STATE = {};
+  Object.entries(DEFINICOES).forEach(([k, def]) => {
+    // Gera todas as parcelas de todas as séries
+    let parcelas = def.series();
+    // Ordena cronologicamente (por vencimento, depois por série)
+    parcelas.sort((a, b) => a.venc < b.venc ? -1 : a.venc > b.venc ? 1 : a.serie.localeCompare(b.serie));
+    // Atribui número global sequencial
+    parcelas.forEach((p, i) => { p.globalNum = i + 1; });
+    // Marca como PAGA as com vencimento < hoje
+    parcelas.forEach(p => {
+      if (p.venc < DATA_CORTE_PAGO) {
+        p.status = 'PAGO';
+        p.dtPagamento = p.venc;
+        p.valorPago = p.valor;
+      }
+    });
+    STATE[k] = { apto: def.apto, contrato: def.contrato, comprador: def.comprador,
+                 co: def.co, txMulta: def.txMulta, txJuros: def.txJuros, obs: def.obs, parcelas };
+  });
+  // Reverte parcelas em aberto conforme SIENGE — muda de PAGO para PENDENTE
+  SIENGE_ABERTOS.forEach(({ k, venc, valor }) => {
+    if (!STATE[k]) return;
+    const p = STATE[k].parcelas.find(p => p.venc === venc && Math.abs(p.valor - valor) < 0.01);
+    if (p) {
+      p.status = 'PENDENTE';
+      p.dtPagamento = '';
+      p.valorPago = 0;
+      p.forma = '';
+      p.ref = '';
+    }
+  });
+  salvarState();
+}
+
+// ─── Supabase REST API (fetch direto, sem biblioteca) ──────
+const SUPABASE_URL  = 'https://flrhcelutychacawkgyh.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZscmhjZWx1dHljaGFjYXdrZ3loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0OTM0OTcsImV4cCI6MjEwMzA2OTQ5N30.OEu5X_zQgLNTYRFYBWfN-Yrjg5voCofBZt8L5bhCtqM';
+
+const SB_HDR = {
+  'apikey':        SUPABASE_ANON,
+  'Authorization': 'Bearer ' + SUPABASE_ANON,
+  'Content-Type':  'application/json'
+};
+
+async function sbGet() {
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/pagamentos?select=contrato_key,venc,valor_pago,dt_pagamento,forma,ref',
+    { headers: SB_HDR }
+  );
+  if (!res.ok) throw new Error(res.status + ': ' + await res.text());
+  return res.json();
+}
+
+async function sbUpsert(row) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/pagamentos', {
+    method:  'POST',
+    headers: { ...SB_HDR, 'Prefer': 'resolution=merge-duplicates' },
+    body:    JSON.stringify(row)
+  });
+  if (!res.ok) throw new Error(res.status + ': ' + await res.text());
+}
+
+async function sbDelete(contrato_key, venc) {
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/pagamentos?contrato_key=eq.' + contrato_key + '&venc=eq.' + venc,
+    { method: 'DELETE', headers: SB_HDR }
+  );
+  if (!res.ok) throw new Error(res.status + ': ' + await res.text());
+}
+
+// Aplica pagamentos do banco sobre o STATE
+// Rows com forma='__ESTORNO__' revertem o auto-mark para PENDENTE
+function aplicarPagamentos(rows) {
+  rows.forEach(({ contrato_key, venc, valor_pago, dt_pagamento, forma, ref }) => {
+    const c = STATE[contrato_key];
+    if (!c) return;
+    const p = c.parcelas.find(p => p.venc === venc);
+    if (!p) return;
+    if (forma === '__ESTORNO__') {
+      // Estorno persistido: reverte auto-mark para PENDENTE
+      p.status      = 'PENDENTE';
+      p.dtPagamento = '';
+      p.valorPago   = 0;
+      p.forma       = '';
+      p.ref         = '';
+    } else {
+      p.status      = 'PAGO';
+      p.dtPagamento = dt_pagamento;
+      p.valorPago   = parseFloat(valor_pago);
+      p.forma       = forma || '';
+      p.ref         = ref  || '';
+    }
+  });
+}
+
+async function carregarState() {
+  inicializarState();
+  try {
+    const rows = await sbGet();
+    aplicarPagamentos(rows);
+    mostrarStatusDB('✅ Sincronizado com Supabase', 'ok');
+  } catch(e) {
+    console.error('Supabase erro:', e.message);
+    mostrarStatusDB('❌ ' + e.message, 'err');
+  }
+}
+
+function mostrarStatusDB(msg, tipo) {
+  const el = document.getElementById('dbStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = tipo==='ok' ? 'var(--grn)' : tipo==='err' ? 'var(--red)' : 'var(--yel)';
+}
+
+function salvarState() {} // noop — persistência via Supabase por operação
+
+// ─── Helpers ──────────────────────────────────────────────
+const fmt  = v => Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtD = s => { if(!s||s==='—')return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+const diasAtraso = (venc, base) => Math.max(0, Math.floor(
+  (new Date(base+'T12:00:00') - new Date(venc+'T12:00:00')) / 86400000));
+
+function statusParcela(p, base) {
+  if (p.status === 'PAGO') return 'PAGO';
+  if (p.venc === base)     return 'HOJE';
+  if (p.venc < base)       return 'VENCIDO';
+  return 'A_VENCER';
+}
+
+function badgeStatus(s) {
+  if(s==='PAGO')    return `<span class="badge badge-pago">✅ Pago</span>`;
+  if(s==='VENCIDO') return `<span class="badge badge-vencido">⚠️ Vencida</span>`;
+  if(s==='HOJE')    return `<span class="badge badge-hoje">📅 Vence Hoje</span>`;
+  return `<span class="badge badge-avencer">🔵 A Vencer</span>`;
+}
+
+function badgeDias(d) {
+  const c = d>90?'red':d>30?'ora':'yel';
+  return `<span class="badge badge-dias ${c}">${d}d</span>`;
+}
+
+function calcEncargos(valor, venc, base, txJuros, txMulta) {
+  const d = diasAtraso(venc, base);
+  const multa = valor * txMulta;
+  const juros = valor * txJuros * (d / 30);
+  return { dias:d, multa, juros, enc:multa+juros, total:valor+multa+juros };
+}
+
+// ─── Tabs ─────────────────────────────────────────────────
+function openTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id==='painel')     renderPainel();
+  if (id==='relatorios') renderRelatorio();
+}
+
+// ─── PAINEL ───────────────────────────────────────────────
+function renderPainel() {
+  const base = today();
+  document.getElementById('dataBaseLabel').textContent = fmtD(base);
+  document.getElementById('phDate').textContent = fmtD(base);
+
+  let totOrig=0, totEnc=0, totTot=0, totVenc=0, totPago=0, totAVencer=0;
+  const vencidasRows = [];
+
+  const ccHtml = Object.keys(STATE).map(k => {
+    const c   = STATE[k];
+    const def = DEFINICOES[k];
+    let vencN=0, pagoN=0, aVencerN=0;
+
+    c.parcelas.forEach((p, pidx) => {
+      const s = statusParcela(p, base);
+      if (s==='PAGO') { pagoN++; }
+      else if (s==='VENCIDO'||s==='HOJE') {
+        vencN++;
+        const e = calcEncargos(p.valor, p.venc, base, def.txJuros, def.txMulta);
+        vencidasRows.push({k, p, c, def, e, pidx});
+        totOrig += p.valor; totEnc += e.enc; totTot += e.total;
+      } else aVencerN++;
+    });
+
+    totVenc += vencN; totPago += pagoN; totAVencer += aVencerN;
+    const total = c.parcelas.length;
+    const pct = Math.round(pagoN / total * 100);
+    return `<div class="contract-card" onclick="irParaParcelas('${k}')">
+      <div class="cc-apto">${c.apto}</div>
+      <div class="cc-nome">${c.comprador}${c.co?'<br>'+c.co:''}</div>
+      <div class="cc-nome" style="margin-top:4px;font-size:.7rem;color:var(--azul2)">${c.contrato} · ${total} parc.</div>
+      <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <p style="font-size:.67rem;color:var(--gray5);margin-top:3px">${pagoN} pagas de ${total} (${pct}%)</p>
+      <div class="cc-stats">
+        ${vencN>0?`<span class="cc-stat red">⚠️ ${vencN} vencida${vencN>1?'s':''}</span>`:''}
+        <span class="cc-stat grn">✅ ${pagoN} paga${pagoN>1?'s':''}</span>
+        <span class="cc-stat gray">🔵 ${aVencerN} a vencer</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('contractCards').innerHTML = ccHtml;
+  document.getElementById('painelKpis').innerHTML = `
+    <div class="kpi red"><div class="lbl">Parcelas Vencidas</div><div class="val">${totVenc}</div></div>
+    <div class="kpi ora"><div class="lbl">Principal Vencido</div><div class="val">R$ ${fmt(totOrig)}</div></div>
+    <div class="kpi red"><div class="lbl">Encargos (Multa+Juros)</div><div class="val">R$ ${fmt(totEnc)}</div></div>
+    <div class="kpi yel"><div class="lbl">Total Atualizado</div><div class="val">R$ ${fmt(totTot)}</div></div>
+    <div class="kpi grn"><div class="lbl">Parcelas Pagas</div><div class="val">${totPago}</div></div>
+    <div class="kpi azul"><div class="lbl">A Vencer</div><div class="val">${totAVencer}</div></div>`;
+
+  let rows='', totM=0, totJ=0, totT2=0, totO2=0;
+  vencidasRows.forEach(({k, p, c, def, e, pidx}) => {
+    totO2+=p.valor; totM+=e.multa; totJ+=e.juros; totT2+=e.total;
+    const pIdx = pidx;
+    rows += `<tr>
+      <td><strong>${c.apto}</strong><br><small style="color:var(--gray5)">${c.contrato}</small></td>
+      <td><span class="badge-serie">${p.serie}</span> <small style="color:var(--gray5)">${p.num}/${p.total}</small></td>
+      <td style="font-size:.78em">${c.comprador.split('/')[0].trim()}</td>
+      <td><strong>#${p.globalNum||pIdx+1}</strong></td>
+      <td>${fmtD(p.venc)}</td>
+      <td class="r">R$ ${fmt(p.valor)}</td>
+      <td class="r">${badgeDias(e.dias)}</td>
+      <td class="r">R$ ${fmt(e.multa)}</td>
+      <td class="r">R$ ${fmt(e.juros)}</td>
+      <td class="r"><strong>R$ ${fmt(e.total)}</strong></td>
+      <td class="no-print"><button class="btn btn-success btn-sm" onclick="abrirBaixa('${k}',${pIdx},'${p.serie}')">✅ Baixar</button></td>
+    </tr>`;
+  });
+  document.getElementById('vencidasBody').innerHTML = rows ||
+    '<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--gray6)">✅ Nenhuma parcela vencida.</td></tr>';
+  document.getElementById('vencidasFoot').innerHTML = vencidasRows.length ?
+    `<tr>
+      <td colspan="5">TOTAL — ${vencidasRows.length} parcela${vencidasRows.length>1?'s':''} vencida${vencidasRows.length>1?'s':''}</td>
+      <td class="r">R$ ${fmt(totO2)}</td><td></td>
+      <td class="r">R$ ${fmt(totM)}</td>
+      <td class="r">R$ ${fmt(totJ)}</td>
+      <td class="r">R$ ${fmt(totT2)}</td>
+      <td class="no-print"></td>
+    </tr>` : '';
+}
+
+function irParaParcelas(k) {
+  document.querySelectorAll('.tab-pane').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-parcelas').classList.add('active');
+  document.querySelectorAll('.tab-btn')[1].classList.add('active');
+  document.getElementById('selContrato').value = k;
+  renderParcelas();
+}
+
+// ─── PARCELAS POR CONTRATO ────────────────────────────────
+function renderParcelas() {
+  const k      = document.getElementById('selContrato').value;
+  const filtro = document.getElementById('filtroStatus').value;
+  const base   = document.getElementById('dataBaseContrato').value || today();
+  const cardT  = document.getElementById('cardParcelasTabela');
+  const kpiD   = document.getElementById('parcelasKpis');
+  const progD  = document.getElementById('progressCard');
+
+  if (!k) { cardT.style.display='none'; kpiD.style.display='none'; progD.style.display='none'; return; }
+
+  const c   = STATE[k];
+  const def = DEFINICOES[k];
+  let pagoN=0, vencN=0, aVN=0, pagoVal=0, vencVal=0, encTotal=0, totTotal=0;
+  const rows = [];
+
+  c.parcelas.forEach((p, i) => {
+    const s = statusParcela(p, base);
+    const e = (s==='VENCIDO'||s==='HOJE')
+      ? calcEncargos(p.valor, p.venc, base, def.txJuros, def.txMulta)
+      : {dias:0, multa:0, juros:0, enc:0, total:p.valor};
+    if (s==='PAGO')                { pagoN++;  pagoVal += p.valorPago||p.valor; }
+    else if (s==='VENCIDO'||s==='HOJE') { vencN++;  vencVal += p.valor; encTotal += e.enc; totTotal += e.total; }
+    else aVN++;
+
+    const show = filtro==='TODOS' ||
+      (filtro==='VENCIDO' && (s==='VENCIDO'||s==='HOJE')) ||
+      filtro===s;
+    if (show) rows.push({p, s, e, i});
+  });
+
+  const total = c.parcelas.length;
+  const pct = Math.round(pagoN / total * 100);
+  progD.style.display = 'block';
+  document.getElementById('progressTitle').textContent =
+    `Progresso — ${c.apto} (${c.contrato}) — ${c.comprador}`;
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('progressLabel').textContent =
+    `${pagoN} pagas · ${vencN} vencidas · ${aVN} a vencer · ${pct}% concluído`;
+
+  kpiD.style.display = 'grid';
+  kpiD.innerHTML = `
+    <div class="kpi grn"><div class="lbl">Pagas</div><div class="val">${pagoN}</div><div class="sub">R$ ${fmt(pagoVal)}</div></div>
+    <div class="kpi red"><div class="lbl">Vencidas</div><div class="val">${vencN}</div><div class="sub">R$ ${fmt(vencVal)}</div></div>
+    <div class="kpi ora"><div class="lbl">Encargos Devidos</div><div class="val">R$ ${fmt(encTotal)}</div></div>
+    <div class="kpi yel"><div class="lbl">Total Vencido Atualiz.</div><div class="val">R$ ${fmt(totTotal)}</div></div>
+    <div class="kpi azul"><div class="lbl">A Vencer</div><div class="val">${aVN}</div></div>`;
+
+  cardT.style.display = 'block';
+  document.getElementById('parcelasTitulo').textContent =
+    `📋 ${c.apto} — ${c.contrato} — ${total} parcelas`;
+
+  let tRows = '', totO=0, totM=0, totJ=0, totT=0;
+  rows.forEach(({p, s, e, i}) => {
+    if (s!=='PAGO') { totO+=p.valor; totM+=e.multa; totJ+=e.juros; totT+=e.total; }
+    const trCls = s==='PAGO'?' class="status-pago"':'';
+    const acaoBt = s==='PAGO'
+      ? `<button class="btn btn-danger btn-sm" onclick="abrirEstorno('${k}',${i})">↩️ Estorno</button>`
+      : `<button class="btn btn-success btn-sm" onclick="abrirBaixa('${k}',${i},'')">✅ Baixar</button>`;
+    tRows += `<tr${trCls}>
+      <td class="r" style="color:var(--gray5);font-size:.72rem">${p.globalNum||p.num}</td>
+      <td><span class="badge-serie">${p.serie}</span></td>
+      <td style="font-size:.75rem;color:var(--gray6)">${p.num}/${p.total}</td>
+      <td>${fmtD(p.venc)}</td>
+      <td>${badgeStatus(s)}</td>
+      <td class="r">R$ ${fmt(p.valor)}</td>
+      <td class="r">${e.dias>0?badgeDias(e.dias):'—'}</td>
+      <td class="r">${e.multa>0?'R$ '+fmt(e.multa):'—'}</td>
+      <td class="r">${e.juros>0?'R$ '+fmt(e.juros):'—'}</td>
+      <td class="r">${s==='PAGO'?'<span style="color:var(--grn)">R$ '+fmt(p.valorPago||p.valor)+'</span>':'<strong>R$ '+fmt(e.total)+'</strong>'}</td>
+      <td>${s==='PAGO'?(fmtD(p.dtPagamento)+(p.forma?' · '+p.forma:'')):'—'}</td>
+      <td class="no-print">${acaoBt}</td>
+    </tr>`;
+  });
+  document.getElementById('parcelasBody').innerHTML = tRows ||
+    `<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--gray6)">Nenhuma parcela no filtro selecionado.</td></tr>`;
+
+  const hasVenc = rows.some(r => r.s!=='PAGO' && (r.s==='VENCIDO'||r.s==='HOJE'));
+  document.getElementById('parcelasFoot').innerHTML = (rows.length && hasVenc) ? `<tr>
+    <td colspan="5">TOTAL (vencidas em exibição)</td>
+    <td class="r">R$ ${fmt(totO)}</td><td></td>
+    <td class="r">R$ ${fmt(totM)}</td>
+    <td class="r">R$ ${fmt(totJ)}</td>
+    <td class="r">R$ ${fmt(totT)}</td>
+    <td colspan="2" class="no-print"></td>
+  </tr>` : '';
+
+  const multaPct = Math.round(def.txMulta*100);
+  document.getElementById('parcelasNota').textContent =
+    `Data base: ${fmtD(base)} · Multa ${multaPct}% · Juros 1%/mês pro-rata die · ${def.obs}`;
+}
+
+// ─── RELATÓRIOS ───────────────────────────────────────────
+function onTipoRelChange() {
+  const tipo = document.getElementById('tipoRelatorio').value;
+  const show = tipo === 'PERIODO';
+  document.getElementById('fieldPeriodoInicio').style.display = show ? '' : 'none';
+  document.getElementById('fieldPeriodoFim').style.display    = show ? '' : 'none';
+  renderRelatorio();
+}
+
+function renderRelatorio() {
+  const tipo  = document.getElementById('tipoRelatorio').value;
+  const relK  = document.getElementById('relContrato').value;
+  const base  = document.getElementById('relDataBase').value || today();
+  const dtIni = document.getElementById('periodoInicio').value;
+  const dtFim = document.getElementById('periodoFim').value;
+
+  const cardR = document.getElementById('cardRelatorio');
+  const kpiR  = document.getElementById('relKpis');
+
+  const keys = relK === 'ALL' ? Object.keys(STATE) : [relK];
+  const allRows = [];
+
+  keys.forEach(k => {
+    const c   = STATE[k];
+    const def = DEFINICOES[k];
+    c.parcelas.forEach((p, i) => {
+      const s = statusParcela(p, base);
+      const e = (s==='VENCIDO'||s==='HOJE')
+        ? calcEncargos(p.valor, p.venc, base, def.txJuros, def.txMulta)
+        : {dias:0, multa:0, juros:0, enc:0, total:p.valor};
+
+      let include = false;
+      if (tipo==='VENCIDOS')  include = s==='VENCIDO'||s==='HOJE';
+      if (tipo==='CONTRATO')  include = true;
+      if (tipo==='PAGAS')     include = s==='PAGO';
+      if (tipo==='PERIODO')   include = (!dtIni||p.venc>=dtIni) && (!dtFim||p.venc<=dtFim);
+
+      if (include) allRows.push({k, c, def, p, s, e, i});
+    });
+  });
+
+  cardR.style.display = 'block';
+  kpiR.style.display  = 'grid';
+
+  const tipoLabel = {
+    VENCIDOS:'Parcelas Vencidas', CONTRATO:'Contrato Completo',
+    PERIODO:'Por Período', PAGAS:'Parcelas Pagas'
+  }[tipo];
+  const unidLabel = relK==='ALL' ? 'Todas as Unidades' :
+    (STATE[relK]?.apto + ' — ' + STATE[relK]?.comprador);
+  document.getElementById('relTitulo').textContent = `📑 ${tipoLabel} — ${unidLabel}`;
+
+  let totO=0, totM=0, totJ=0, totT=0, cntPago=0, cntVenc=0, cntAV=0;
+  let rRows = '';
+  allRows.forEach(({k, c, def, p, s, e}) => {
+    if (s==='PAGO')              cntPago++;
+    else if (s==='VENCIDO'||s==='HOJE') { cntVenc++; totO+=p.valor; totM+=e.multa; totJ+=e.juros; totT+=e.total; }
+    else cntAV++;
+    rRows += `<tr>
+      <td><strong>${c.apto}</strong><br><small style="color:var(--gray5)">${c.contrato}</small></td>
+      <td><span class="badge-serie">${p.serie}</span></td>
+      <td>${p.num}/${p.total}</td>
+      <td>${fmtD(p.venc)}</td>
+      <td>${badgeStatus(s)}</td>
+      <td class="r">R$ ${fmt(p.valor)}</td>
+      <td class="r">${e.dias>0?badgeDias(e.dias):'—'}</td>
+      <td class="r">${e.multa>0?'R$ '+fmt(e.multa):'—'}</td>
+      <td class="r">${e.juros>0?'R$ '+fmt(e.juros):'—'}</td>
+      <td class="r">${s==='PAGO'?'<span style="color:var(--grn)">R$ '+fmt(p.valorPago||p.valor)+'</span>':'<strong>R$ '+fmt(e.total)+'</strong>'}</td>
+      <td>${s==='PAGO'?fmtD(p.dtPagamento):'—'}</td>
+    </tr>`;
+  });
+
+  document.getElementById('relBody').innerHTML = rRows ||
+    `<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--gray6)">Nenhuma parcela no filtro.</td></tr>`;
+  document.getElementById('relFoot').innerHTML = (cntVenc>0) ? `<tr>
+    <td colspan="5">TOTAL (${cntVenc} vencida${cntVenc>1?'s':''})</td>
+    <td class="r">R$ ${fmt(totO)}</td><td></td>
+    <td class="r">R$ ${fmt(totM)}</td>
+    <td class="r">R$ ${fmt(totJ)}</td>
+    <td class="r">R$ ${fmt(totT)}</td>
+    <td></td>
+  </tr>` : '';
+
+  kpiR.innerHTML = `
+    <div class="kpi grn"><div class="lbl">Pagas</div><div class="val">${cntPago}</div></div>
+    <div class="kpi red"><div class="lbl">Vencidas</div><div class="val">${cntVenc}</div></div>
+    <div class="kpi ora"><div class="lbl">Principal Vencido</div><div class="val">R$ ${fmt(totO)}</div></div>
+    <div class="kpi red"><div class="lbl">Encargos (Multa+Juros)</div><div class="val">R$ ${fmt(totM+totJ)}</div></div>
+    <div class="kpi yel"><div class="lbl">Total Atualizado</div><div class="val">R$ ${fmt(totT)}</div></div>
+    <div class="kpi azul"><div class="lbl">A Vencer</div><div class="val">${cntAV}</div></div>`;
+
+  document.getElementById('relNota').textContent =
+    `Data base: ${fmtD(base)} · Gerado em: ${fmtD(today())} · ${allRows.length} parcelas exibidas`;
+}
+
+// ─── MODAL BAIXA ──────────────────────────────────────────
+let _bxK = null, _bxI = null;
+
+function abrirBaixa(k, idx, serie) {
+  _bxK = k; _bxI = idx;
+  const c   = STATE[k];
+  const def = DEFINICOES[k];
+  const p   = c.parcelas[idx];
+  const base= today();
+  const e   = calcEncargos(p.valor, p.venc, base, def.txJuros, def.txMulta);
+  document.getElementById('modalBaixaInfo').innerHTML =
+    `<strong>${c.apto} — ${c.contrato}</strong> · Série ${p.serie} · Parcela ${p.num}/${p.total}<br>` +
+    `Vencimento: ${fmtD(p.venc)} &nbsp;|&nbsp; Valor original: R$ ${fmt(p.valor)}<br>` +
+    (e.dias>0 ? `Dias de atraso: ${e.dias} &nbsp;|&nbsp; Multa: R$ ${fmt(e.multa)} &nbsp;|&nbsp; Juros: R$ ${fmt(e.juros)}<br>` : '') +
+    `<strong>Total sugerido: R$ ${fmt(e.total)}</strong>`;
+  document.getElementById('bxData').value  = base;
+  document.getElementById('bxValor').value = e.total.toFixed(2);
+  document.getElementById('bxRef').value   = '';
+  document.getElementById('modalBaixa').classList.add('open');
+}
+
+async function confirmarBaixa() {
+  const dt  = document.getElementById('bxData').value;
+  const val = parseFloat(document.getElementById('bxValor').value);
+  const frm = document.getElementById('bxForma').value;
+  const ref = document.getElementById('bxRef').value;
+  if (!dt || isNaN(val) || val<=0) { alert('Preencha a data e o valor corretamente.'); return; }
+  const p = STATE[_bxK].parcelas[_bxI];
+  try {
+    await sbUpsert({ contrato_key: _bxK, venc: p.venc, valor_pago: val, dt_pagamento: dt, forma: frm, ref });
+  } catch(e) { alert('Erro ao salvar no Supabase:\n' + e.message); return; }
+  // Atualiza state local
+  p.status      = 'PAGO';
+  p.dtPagamento = dt;
+  p.valorPago   = val;
+  p.forma       = frm;
+  p.ref         = ref;
+  fecharModal();
+  renderParcelas();
+  renderPainel();
+}
+
+// ─── MODAL ESTORNO ────────────────────────────────────────
+let _esK = null, _esI = null;
+
+function abrirEstorno(k, idx) {
+  _esK = k; _esI = idx;
+  const c = STATE[k];
+  const p = c.parcelas[idx];
+  document.getElementById('modalEstornoInfo').innerHTML =
+    `<strong>${c.apto} — ${c.contrato}</strong> · Série ${p.serie} · Parcela ${p.num}/${p.total}<br>` +
+    `Vencimento: ${fmtD(p.venc)} &nbsp;|&nbsp; Valor pago: R$ ${fmt(p.valorPago||p.valor)}<br>` +
+    `Data do pagamento: ${fmtD(p.dtPagamento)}<br>` +
+    `<strong style="color:var(--red)">O estorno irá reverter o status para VENCIDA/PENDENTE.</strong>`;
+  document.getElementById('modalEstorno').classList.add('open');
+}
+
+async function confirmarEstorno() {
+  const p = STATE[_esK].parcelas[_esI];
+  try {
+    // Persiste o estorno com marcador especial para sobrescrever o auto-mark na recarga
+    await sbUpsert({ contrato_key: _esK, venc: p.venc, valor_pago: 0,
+                     dt_pagamento: today(), forma: '__ESTORNO__', ref: '' });
+  } catch(e) { alert('Erro ao estornar no Supabase:\n' + e.message); return; }
+  // Atualiza state local
+  p.status      = 'PENDENTE';
+  p.dtPagamento = '';
+  p.valorPago   = 0;
+  p.forma       = '';
+  p.ref         = '';
+  fecharModal();
+  renderParcelas();
+  renderPainel();
+}
+
+function fecharModal() {
+  document.getElementById('modalBaixa').classList.remove('open');
+  document.getElementById('modalEstorno').classList.remove('open');
+}
+
+// ─── IMPRESSÃO ────────────────────────────────────────────
+function imprimirParcelas() {
+  renderParcelas();
+  const pane = document.getElementById('tab-parcelas');
+  pane.classList.add('print-active');
+  const k = document.getElementById('selContrato').value;
+  if (k) {
+    const c = STATE[k];
+    document.getElementById('phDate').textContent =
+      fmtD(today()) + ' — ' + c.apto + ' — ' + c.contrato;
+  }
+  document.getElementById('printHeader').style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    pane.classList.remove('print-active');
+    document.getElementById('printHeader').style.display = '';
+  }, 200);
+}
+
+function imprimirRelatorio() {
+  renderRelatorio();
+  const pane = document.getElementById('tab-relatorios');
+  pane.classList.add('print-active');
+  const relK = document.getElementById('relContrato');
+  const tipo = document.getElementById('tipoRelatorio');
+  const unidLabel = relK.options[relK.selectedIndex].text;
+  const tipoLabel = tipo.options[tipo.selectedIndex].text;
+  document.getElementById('phDate').textContent =
+    fmtD(today()) + ' — ' + tipoLabel + (relK.value!=='ALL' ? ' — ' + unidLabel : '');
+  document.getElementById('printHeader').style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    pane.classList.remove('print-active');
+    document.getElementById('printHeader').style.display = '';
+  }, 200);
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+(async () => {
+  // Inicializa campos de data com a data de hoje
+  document.getElementById('dataBaseContrato').value = today();
+  document.getElementById('relDataBase').value      = today();
+  // Carrega dados (async: gera state + busca baixas no Supabase)
+  await carregarState();
+  renderPainel();
+})();
+</script>
+</body>
+</html>
