@@ -100,8 +100,19 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
 .status-pago-parcial td{background:#fffbeb !important;}
 .status-pago-parcial:hover td{background:#fef3c7 !important;}
 .alert-box{background:#fff5f5;border:1px solid #fed7d7;border-left:4px solid var(--red);border-radius:var(--radius);padding:10px 14px;font-size:.78rem;color:var(--red);margin-bottom:12px;}
+.filtro-status-group{display:flex;gap:10px;flex-wrap:wrap;align-items:center;border:1px solid var(--gray4);border-radius:6px;padding:6px 10px;background:var(--gray1);min-width:300px;}
+.fst-lbl{font-size:.82rem;font-weight:600;color:var(--gray7);display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;}
+.fst-lbl input{cursor:pointer;}
+.th-acao{position:sticky;right:0;background:var(--azul);z-index:2;box-shadow:-2px 0 4px rgba(0,0,0,.12);}
+.td-acao{position:sticky;right:0;background:#fff;z-index:1;box-shadow:-2px 0 4px rgba(0,0,0,.08);}
+tbody tr:hover .td-acao{background:#f0f7ff;}
+.status-pago .td-acao{background:#f0fff4;}
+.status-pago:hover .td-acao{background:#e6ffee;}
+.status-pago-parcial .td-acao{background:#fffbeb;}
+.status-pago-parcial:hover .td-acao{background:#fef3c7;}
 
 @media print{
+  .th-acao,.td-acao{position:static!important;box-shadow:none!important;}
   @page{size:A4 landscape;margin:8mm 6mm;}
   body{background:#fff;font-size:8pt;}
   .tab-bar,.no-print,header{display:none!important;}
@@ -210,13 +221,13 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
         </select>
       </div>
       <div class="field">
-        <label>Status</label>
-        <select id="filtroStatus" onchange="renderParcelas()">
-          <option value="TODOS">Todas</option>
-          <option value="VENCIDO">Vencidas</option>
-          <option value="A_VENCER">A Vencer</option>
-          <option value="PAGO">Pagas</option>
-        </select>
+        <label>Status <span style="font-size:.68rem;color:var(--gray5);font-weight:400">(nenhum = todas)</span></label>
+        <div class="filtro-status-group" id="filtroStatusGroup">
+          <label class="fst-lbl"><input type="checkbox" value="VENCIDO"     onchange="renderParcelas()"> ⚠️ Vencidas</label>
+          <label class="fst-lbl"><input type="checkbox" value="A_VENCER"   onchange="renderParcelas()"> 🔵 A Vencer</label>
+          <label class="fst-lbl"><input type="checkbox" value="PAGO"       onchange="renderParcelas()"> ✅ Pagas</label>
+          <label class="fst-lbl"><input type="checkbox" value="PAGO_PARCIAL" onchange="renderParcelas()"> ⚠ Pago Parcial</label>
+        </div>
       </div>
       <div class="field">
         <label>Data base cálculo</label>
@@ -239,12 +250,12 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
       <table>
         <thead><tr>
           <th class="r">#</th><th>Série</th><th>Parc./Série</th><th>Vencimento</th><th>Status</th>
-          <th class="no-print">Ação</th>
           <th class="r">Valor Contratual</th><th class="r">Dias</th>
           <th class="r">Multa</th><th class="r">Juros de Mora</th>
           <th class="r">Valor Corrigido</th><th class="r">Valor Pago</th>
           <th class="r">Enc. Pendente</th>
           <th>Pagamento</th>
+          <th class="no-print th-acao">Ação</th>
         </tr></thead>
         <tbody id="parcelasBody"></tbody>
         <tfoot id="parcelasFoot"></tfoot>
@@ -859,9 +870,14 @@ function irParaParcelas(k) {
 }
 
 // ─── PARCELAS POR CONTRATO ────────────────────────────────
+function getFiltrosAtivos() {
+  const checks = document.querySelectorAll('#filtroStatusGroup input[type=checkbox]:checked');
+  return Array.from(checks).map(c => c.value);
+}
+
 function renderParcelas() {
   const k      = document.getElementById('selContrato').value;
-  const filtro = document.getElementById('filtroStatus').value;
+  const filtros = getFiltrosAtivos(); // array vazio = todas
   const base   = document.getElementById('dataBaseContrato').value || today();
   const cardT  = document.getElementById('cardParcelasTabela');
   const kpiD   = document.getElementById('parcelasKpis');
@@ -883,9 +899,17 @@ function renderParcelas() {
     else if (s==='VENCIDO'||s==='HOJE') { vencN++;  vencVal += p.valor; encTotal += e.enc; totTotal += e.total; }
     else aVN++;
 
-    const show = filtro==='TODOS' ||
-      (filtro==='VENCIDO' && (s==='VENCIDO'||s==='HOJE')) ||
-      filtro===s;
+    // Pré-calcular statusEfetivo para filtro de PAGO_PARCIAL
+    let seFilter = s;
+    if (s === 'PAGO' && p.dtPagamento) {
+      const ePF = calcEncargos(p.valor, p.venc, p.dtPagamento, def.txJuros, def.txMulta);
+      if (ePF.total - (p.valorPago || p.valor) > 0.01) seFilter = 'PAGO_PARCIAL';
+    }
+    const show = filtros.length === 0 ||
+      (filtros.includes('VENCIDO')      && (s==='VENCIDO'||s==='HOJE')) ||
+      (filtros.includes('A_VENCER')     && s==='A_VENCER') ||
+      (filtros.includes('PAGO')         && seFilter==='PAGO') ||
+      (filtros.includes('PAGO_PARCIAL') && seFilter==='PAGO_PARCIAL');
     if (show) rows.push({p, s, e, i});
   });
 
@@ -957,7 +981,6 @@ function renderParcelas() {
       <td style="font-size:.75rem;color:var(--gray6)">${p.num}/${p.total}</td>
       <td>${fmtD(p.venc)}</td>
       <td>${badgeSt}</td>
-      <td class="no-print">${acaoBt}</td>
       <td class="r">R$ ${fmt(p.valor)}</td>
       <td class="r">${diasCol}</td>
       <td class="r">${multaCol}</td>
@@ -966,6 +989,7 @@ function renderParcelas() {
       <td class="r">${pagoCol}</td>
       <td class="r">${pendCol}</td>
       <td>${s==='PAGO'?(fmtD(p.dtPagamento)+(p.forma?' · '+p.forma:'')):'—'}</td>
+      <td class="no-print td-acao">${acaoBt}</td>
     </tr>`;
   });
   document.getElementById('parcelasBody').innerHTML = tRows ||
@@ -974,12 +998,12 @@ function renderParcelas() {
   const hasVenc = rows.some(r => r.s!=='PAGO' && (r.s==='VENCIDO'||r.s==='HOJE'));
   document.getElementById('parcelasFoot').innerHTML = (rows.length && hasVenc) ? `<tr>
     <td colspan="5">TOTAL (vencidas em exibição)</td>
-    <td class="no-print"></td>
     <td class="r">R$ ${fmt(totO)}</td><td></td>
     <td class="r">R$ ${fmt(totM)}</td>
     <td class="r">R$ ${fmt(totJ)}</td>
     <td class="r">R$ ${fmt(totT)}</td>
     <td></td><td></td><td></td>
+    <td class="no-print"></td>
   </tr>` : '';
 
   const multaPct = Math.round(def.txMulta*100);
