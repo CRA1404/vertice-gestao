@@ -237,11 +237,12 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
       <table>
         <thead><tr>
           <th class="r">#</th><th>Série</th><th>Parc./Série</th><th>Vencimento</th><th>Status</th>
+          <th class="no-print">Ação</th>
           <th class="r">Valor Contratual</th><th class="r">Dias</th>
           <th class="r">Multa</th><th class="r">Juros de Mora</th>
           <th class="r">Valor Corrigido</th><th class="r">Valor Pago</th>
           <th class="r">Enc. Pendente</th>
-          <th>Pagamento</th><th class="no-print">Ação</th>
+          <th>Pagamento</th>
         </tr></thead>
         <tbody id="parcelasBody"></tbody>
         <tfoot id="parcelasFoot"></tfoot>
@@ -954,6 +955,7 @@ function renderParcelas() {
       <td style="font-size:.75rem;color:var(--gray6)">${p.num}/${p.total}</td>
       <td>${fmtD(p.venc)}</td>
       <td>${badgeSt}</td>
+      <td class="no-print">${acaoBt}</td>
       <td class="r">R$ ${fmt(p.valor)}</td>
       <td class="r">${diasCol}</td>
       <td class="r">${multaCol}</td>
@@ -962,7 +964,6 @@ function renderParcelas() {
       <td class="r">${pagoCol}</td>
       <td class="r">${pendCol}</td>
       <td>${s==='PAGO'?(fmtD(p.dtPagamento)+(p.forma?' · '+p.forma:'')):'—'}</td>
-      <td class="no-print">${acaoBt}</td>
     </tr>`;
   });
   document.getElementById('parcelasBody').innerHTML = tRows ||
@@ -971,12 +972,12 @@ function renderParcelas() {
   const hasVenc = rows.some(r => r.s!=='PAGO' && (r.s==='VENCIDO'||r.s==='HOJE'));
   document.getElementById('parcelasFoot').innerHTML = (rows.length && hasVenc) ? `<tr>
     <td colspan="5">TOTAL (vencidas em exibição)</td>
+    <td class="no-print"></td>
     <td class="r">R$ ${fmt(totO)}</td><td></td>
     <td class="r">R$ ${fmt(totM)}</td>
     <td class="r">R$ ${fmt(totJ)}</td>
     <td class="r">R$ ${fmt(totT)}</td>
-    <td></td><td></td>
-    <td colspan="2" class="no-print"></td>
+    <td></td><td></td><td></td>
   </tr>` : '';
 
   const multaPct = Math.round(def.txMulta*100);
