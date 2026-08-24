@@ -95,6 +95,8 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
 .nota{font-size:.7rem;color:var(--gray6);margin-top:8px;line-height:1.5;}
 .status-pago td{background:#f0fff4 !important;}
 .status-pago:hover td{background:#e6ffee !important;}
+.status-pago-parcial td{background:#fffbeb !important;}
+.status-pago-parcial:hover td{background:#fef3c7 !important;}
 .alert-box{background:#fff5f5;border:1px solid #fed7d7;border-left:4px solid var(--red);border-radius:var(--radius);padding:10px 14px;font-size:.78rem;color:var(--red);margin-bottom:12px;}
 
 @media print{
@@ -235,8 +237,10 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
       <table>
         <thead><tr>
           <th class="r">#</th><th>Série</th><th>Parc./Série</th><th>Vencimento</th><th>Status</th>
-          <th class="r">Valor Original</th><th class="r">Dias Atraso</th>
-          <th class="r">Multa</th><th class="r">Juros</th><th class="r">Total a Pagar</th>
+          <th class="r">Valor Contratual</th><th class="r">Dias</th>
+          <th class="r">Multa</th><th class="r">Juros de Mora</th>
+          <th class="r">Valor Corrigido</th><th class="r">Valor Pago</th>
+          <th class="r">Enc. Pendente</th>
           <th>Pagamento</th><th class="no-print">Ação</th>
         </tr></thead>
         <tbody id="parcelasBody"></tbody>
@@ -359,15 +363,27 @@ tfoot td.r{text-align:right;font-family:'Courier New',monospace;}
   <div class="modal">
     <h2>✅ Registrar Baixa de Pagamento</h2>
     <div class="modal-info" id="modalBaixaInfo"></div>
+    <!-- Breakdown de encargos -->
+    <div id="bxBreakdown" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:.82rem;display:none">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="color:var(--gray6)">Valor Contratual</td><td class="r" id="bxBValor">—</td></tr>
+        <tr><td style="color:var(--gray6)">Multa</td><td class="r" id="bxBMulta" style="color:var(--red)">—</td></tr>
+        <tr><td style="color:var(--gray6)">Juros de Mora</td><td class="r" id="bxBJuros" style="color:var(--red)">—</td></tr>
+        <tr style="border-top:1px solid var(--border);font-weight:700"><td>Total Corrigido</td><td class="r" id="bxBTotal">—</td></tr>
+      </table>
+    </div>
     <div class="modal-row">
       <div class="modal-field">
         <label>Data do Pagamento</label>
-        <input type="date" id="bxData">
+        <input type="date" id="bxData" onchange="atualizarBreakdownBaixa()">
       </div>
       <div class="modal-field">
-        <label>Valor Pago (R$)</label>
+        <label>Valor Efetivamente Pago (R$) <span style="font-size:.75em;color:var(--gray6)">— editável</span></label>
         <input type="number" id="bxValor" step="0.01" min="0">
       </div>
+    </div>
+    <div id="bxAlertaParcial" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:var(--radius);padding:8px 12px;font-size:.78rem;color:#92400e;margin-bottom:8px">
+      ⚠ Valor inferior ao total corrigido — a parcela ficará marcada como <strong>PAGO PARCIAL</strong>, com encargo pendente visível na tabela.
     </div>
     <div class="modal-row">
       <div class="modal-field">
@@ -894,27 +910,63 @@ function renderParcelas() {
   let tRows = '', totO=0, totM=0, totJ=0, totT=0;
   rows.forEach(({p, s, e, i}) => {
     if (s!=='PAGO') { totO+=p.valor; totM+=e.multa; totJ+=e.juros; totT+=e.total; }
-    const trCls = s==='PAGO'?' class="status-pago"':'';
-    const acaoBt = s==='PAGO'
-      ? `<button class="btn btn-danger btn-sm" onclick="abrirEstorno('${k}',${i})">↩️ Estorno</button>`
-      : `<button class="btn btn-success btn-sm" onclick="abrirBaixa('${k}',${i},'')">✅ Baixar</button>`;
+
+    // Para PAGO: calcular encargos na data de pagamento e verificar se foi parcial
+    let ePago = {dias:0, multa:0, juros:0, enc:0, total:p.valor};
+    let encPendente = 0;
+    let statusEfetivo = s;
+    if (s === 'PAGO' && p.dtPagamento) {
+      ePago = calcEncargos(p.valor, p.venc, p.dtPagamento, def.txJuros, def.txMulta);
+      const totalDevido = ePago.total;
+      const valPago = p.valorPago || p.valor;
+      encPendente = Math.max(0, totalDevido - valPago);
+      if (encPendente > 0.01) statusEfetivo = 'PAGO_PARCIAL';
+    }
+
+    const trCls = s==='PAGO' ? (encPendente>0.01?' class="status-pago-parcial"':' class="status-pago"') : '';
+
+    let acaoBt = '';
+    if (s === 'PAGO') {
+      acaoBt = `<button class="btn btn-danger btn-sm" onclick="abrirEstorno('${k}',${i})">↩️ Estorno</button>`;
+    } else {
+      acaoBt = `<button class="btn btn-success btn-sm" onclick="abrirBaixa('${k}',${i},'')">✅ Baixar</button>`;
+    }
+
+    // Colunas de encargos: para PAGO usa encargos na data de pgto; para vencido usa base atual
+    const diasCol  = s==='PAGO' ? (ePago.dias>0?badgeDias(ePago.dias):'—') : (e.dias>0?badgeDias(e.dias):'—');
+    const multaCol = s==='PAGO' ? (ePago.multa>0?'R$ '+fmt(ePago.multa):'—') : (e.multa>0?'R$ '+fmt(e.multa):'—');
+    const jurosCol = s==='PAGO' ? (ePago.juros>0?'R$ '+fmt(ePago.juros):'—') : (e.juros>0?'R$ '+fmt(e.juros):'—');
+    const corrCol  = s==='PAGO' ? 'R$ '+fmt(ePago.total) : (s==='VENCIDO'||s==='HOJE'?'<strong>R$ '+fmt(e.total)+'</strong>':'R$ '+fmt(p.valor));
+    const pagoCol  = s==='PAGO'
+      ? '<span style="color:var(--grn)">R$ '+fmt(p.valorPago||p.valor)+'</span>'
+      : '—';
+    const pendCol  = encPendente>0.01
+      ? '<span style="color:var(--red);font-weight:600">R$ '+fmt(encPendente)+'</span>'
+      : (s==='PAGO'?'<span style="color:var(--grn)">✓</span>':'—');
+
+    const badgeSt = statusEfetivo==='PAGO_PARCIAL'
+      ? '<span class="badge-status" style="background:#f59e0b;color:#fff">⚠ PAGO PARCIAL</span>'
+      : badgeStatus(s);
+
     tRows += `<tr${trCls}>
       <td class="r" style="color:var(--gray5);font-size:.72rem">${p.globalNum||p.num}</td>
       <td><span class="badge-serie">${p.serie}</span></td>
       <td style="font-size:.75rem;color:var(--gray6)">${p.num}/${p.total}</td>
       <td>${fmtD(p.venc)}</td>
-      <td>${badgeStatus(s)}</td>
+      <td>${badgeSt}</td>
       <td class="r">R$ ${fmt(p.valor)}</td>
-      <td class="r">${e.dias>0?badgeDias(e.dias):'—'}</td>
-      <td class="r">${e.multa>0?'R$ '+fmt(e.multa):'—'}</td>
-      <td class="r">${e.juros>0?'R$ '+fmt(e.juros):'—'}</td>
-      <td class="r">${s==='PAGO'?'<span style="color:var(--grn)">R$ '+fmt(p.valorPago||p.valor)+'</span>':'<strong>R$ '+fmt(e.total)+'</strong>'}</td>
+      <td class="r">${diasCol}</td>
+      <td class="r">${multaCol}</td>
+      <td class="r">${jurosCol}</td>
+      <td class="r">${corrCol}</td>
+      <td class="r">${pagoCol}</td>
+      <td class="r">${pendCol}</td>
       <td>${s==='PAGO'?(fmtD(p.dtPagamento)+(p.forma?' · '+p.forma:'')):'—'}</td>
       <td class="no-print">${acaoBt}</td>
     </tr>`;
   });
   document.getElementById('parcelasBody').innerHTML = tRows ||
-    `<tr><td colspan="11" style="text-align:center;padding:16px;color:var(--gray6)">Nenhuma parcela no filtro selecionado.</td></tr>`;
+    `<tr><td colspan="14" style="text-align:center;padding:16px;color:var(--gray6)">Nenhuma parcela no filtro selecionado.</td></tr>`;
 
   const hasVenc = rows.some(r => r.s!=='PAGO' && (r.s==='VENCIDO'||r.s==='HOJE'));
   document.getElementById('parcelasFoot').innerHTML = (rows.length && hasVenc) ? `<tr>
@@ -923,6 +975,7 @@ function renderParcelas() {
     <td class="r">R$ ${fmt(totM)}</td>
     <td class="r">R$ ${fmt(totJ)}</td>
     <td class="r">R$ ${fmt(totT)}</td>
+    <td></td><td></td>
     <td colspan="2" class="no-print"></td>
   </tr>` : '';
 
@@ -1030,6 +1083,23 @@ function renderRelatorio() {
 // ─── MODAL BAIXA ──────────────────────────────────────────
 let _bxK = null, _bxI = null;
 
+function atualizarBreakdownBaixa() {
+  if (!_bxK) return;
+  const c   = STATE[_bxK];
+  const def = DEFINICOES[_bxK];
+  const p   = c.parcelas[_bxI];
+  const dt  = document.getElementById('bxData').value || today();
+  const e   = calcEncargos(p.valor, p.venc, dt, def.txJuros, def.txMulta);
+  document.getElementById('bxBValor').textContent = 'R$ ' + fmt(p.valor);
+  document.getElementById('bxBMulta').textContent = e.multa>0 ? 'R$ '+fmt(e.multa) : '—';
+  document.getElementById('bxBJuros').textContent = e.juros>0 ? 'R$ '+fmt(e.juros) : '—';
+  document.getElementById('bxBTotal').textContent = 'R$ ' + fmt(e.total);
+  document.getElementById('bxValor').value = e.total.toFixed(2);
+  // Alerta parcial ao digitar
+  const valAtual = parseFloat(document.getElementById('bxValor').value)||0;
+  document.getElementById('bxAlertaParcial').style.display = (valAtual < e.total - 0.01) ? '' : 'none';
+}
+
 function abrirBaixa(k, idx, serie) {
   _bxK = k; _bxI = idx;
   const c   = STATE[k];
@@ -1043,8 +1113,22 @@ function abrirBaixa(k, idx, serie) {
     (e.dias>0 ? `Dias de atraso: ${e.dias} &nbsp;|&nbsp; Multa: R$ ${fmt(e.multa)} &nbsp;|&nbsp; Juros: R$ ${fmt(e.juros)}<br>` : '') +
     `<strong>Total sugerido: R$ ${fmt(e.total)}</strong>`;
   document.getElementById('bxData').value  = base;
-  document.getElementById('bxValor').value = e.total.toFixed(2);
   document.getElementById('bxRef').value   = '';
+  document.getElementById('bxAlertaParcial').style.display = 'none';
+  // Preencher breakdown
+  document.getElementById('bxBreakdown').style.display = '';
+  document.getElementById('bxBValor').textContent = 'R$ ' + fmt(p.valor);
+  document.getElementById('bxBMulta').textContent = e.multa>0 ? 'R$ '+fmt(e.multa) : '—';
+  document.getElementById('bxBJuros').textContent = e.juros>0 ? 'R$ '+fmt(e.juros) : '—';
+  document.getElementById('bxBTotal').textContent = 'R$ ' + fmt(e.total);
+  document.getElementById('bxValor').value = e.total.toFixed(2);
+  // Detectar digitação no valor para alerta parcial
+  const bxValorEl = document.getElementById('bxValor');
+  bxValorEl.oninput = function() {
+    const v = parseFloat(this.value)||0;
+    const eNow = calcEncargos(p.valor, p.venc, document.getElementById('bxData').value||today(), DEFINICOES[_bxK].txJuros, DEFINICOES[_bxK].txMulta);
+    document.getElementById('bxAlertaParcial').style.display = (v < eNow.total - 0.01) ? '' : 'none';
+  };
   document.getElementById('modalBaixa').classList.add('open');
 }
 
